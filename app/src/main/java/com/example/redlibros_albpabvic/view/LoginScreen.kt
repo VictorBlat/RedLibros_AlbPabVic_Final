@@ -1,90 +1,148 @@
 package com.example.redlibros_albpabvic.view
 
-import com.example.redlibros_albpabvic.R.*
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import android.widget.Toast
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
-import com.example.redlibros_albpabvic.Rutas.Routes.Main
-import com.example.redlibros_albpabvic.viewModel.loginViewModel
+import com.example.redlibros_albpabvic.viewModel.LoginViewModel
+
+
 
 @Composable
-fun LoginScreen(navController: NavHostController, loginViewModel: loginViewModel) {
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .padding(vertical = 24.dp)) {
-            Header(Modifier.align(Alignment.TopStart))
-            Body(Modifier.align(Alignment.Center), navController, loginViewModel)
-            Footer(Modifier.align(Alignment.BottomCenter))
+fun LoginScreen(
+    loginViewModel: LoginViewModel,
+    onLoginSuccess: () -> Unit
+) {
+    val uiState by loginViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        Column(
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Text(text = "Xarxa de Llibres", style = MaterialTheme.typography.headlineMedium)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = uiState.username,
+                onValueChange = { loginViewModel.onUsernameChange(it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Email") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                )
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            var passVisible by remember { mutableStateOf(false) }
+
+            OutlinedTextField(
+                value = uiState.password,
+                onValueChange = { loginViewModel.onPasswordChange(it) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Password") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
+                visualTransformation = if (passVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { passVisible = !passVisible }) {
+                        Icon(
+                            imageVector = if (passVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = "Ver contraseña"
+                        )
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = uiState.remember,
+                    onCheckedChange = { loginViewModel.toggleRemember() }
+                )
+                Text("Recordarme")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    enabled = uiState.isLoginEnabled,
+                    onClick = {
+                        loginViewModel.registerUser { ok ->
+                            if (ok) {
+                                Toast.makeText(
+                                    context,
+                                    "Usuario registrado",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Register")
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    modifier = Modifier.weight(1f),
+                    enabled = uiState.isLoginEnabled,
+                    onClick = {
+                        loginViewModel.login { ok ->
+                            if (ok) {
+                                Toast.makeText(
+                                    context,
+                                    "Login correcto",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                onLoginSuccess()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Login incorrecto",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Log In")
+                }
+            }
         }
+    }
 }
-
-    @Composable
-    fun Footer(modifier: Modifier) {
-        Text(text = "Version 1.0.20251110",
-            modifier = modifier)
-    }
-
-    @Composable
-    fun Header(modifier: Modifier) {
-        Icon(imageVector = Icons.Filled.Close,
-            contentDescription = "Close APP",
-            modifier = modifier)
-    }
-
-    @Composable
-    fun Body(modifier: Modifier, navController: NavHostController, loginViewModel: loginViewModel) {
-        val mail by loginViewModel.email.observeAsState("")
-        val isLoginValid by loginViewModel.isLoginEnabled.observeAsState(false)
-        Column(modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Logo()
-            Spacer(modifier = Modifier.height(12.dp))
-            Email(mail) {loginViewModel.onLoginChange(it)}
-            Spacer(modifier = Modifier.height(12.dp))
-            LoginButton(isLoginValid, navController)
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-    }
-
-    @Composable
-    fun Email(mail: String, onValueChange: (String) -> Unit) {
-        TextField(value = mail,
-            onValueChange = { onValueChange(it) },
-            maxLines = 1,
-            singleLine = true,
-            placeholder = { Text("email@example.com")}
-        )
-    }
-
-
-    @Composable
-    fun LoginButton(ena:Boolean, navController:NavHostController){
-        Button(enabled = ena,
-            onClick = { navController.navigate(Main.route) }) {
-            Text("LOGIN")
-        }
-    }
-
-    @Composable
-    fun Logo(){
-        Image(painter = painterResource(drawable.redlibros),
-            contentDescription = "Logo")
-    }

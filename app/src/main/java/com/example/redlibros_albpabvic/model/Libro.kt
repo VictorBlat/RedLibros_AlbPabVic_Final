@@ -1,9 +1,13 @@
 package com.example.redlibros_albpabvic.model
 
-data class Book(
-    val title: String,
-    val curso: String,
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "libros")
+data class Libro(
+    @PrimaryKey(autoGenerate = true) val idlibro: Int = 0,
+    val nombre: String,
+    val autor: String,
     val isbn: String,
-    val year: String = "1990",
-    var disponible: Boolean = true
+    val favorito: Boolean = false
 )
