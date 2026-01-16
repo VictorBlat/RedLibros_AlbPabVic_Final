@@ -1,12 +1,14 @@
 package com.example.redlibros_albpabvic.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-@Entity(tableName = "transacciones")
+@Serializable
 data class Transaccion(
-    @PrimaryKey(autoGenerate = true) val idtransaccion: Int = 0,
-    val idalumno: Int,
-    val idlibro: Int,
-    val fecha: Long // timestamp en millis
+    @SerialName("idtransaccion") val idtransaccion: Int = 0,
+    @SerialName("idalumno") val idalumno: Int,
+    @SerialName("idlibro") val idlibro: Int,
+    @SerialName("iduser_profesor") val iduserProfesor: Int,
+    @SerialName("fecha_prestamo") val fechaPrestamo: String,
+    @SerialName("fecha_devolucion") val fechaDevolucion: String? = null
 )

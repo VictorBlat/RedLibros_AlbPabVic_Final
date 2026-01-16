@@ -1,12 +1,11 @@
 package com.example.redlibros_albpabvic.model
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-@Entity(tableName = "users")
+@Serializable
 data class User(
-    @PrimaryKey(autoGenerate = true) val iduser: Int = 0,
-    @ColumnInfo(name = "username") val username: String,
-    @ColumnInfo(name = "password") val password: String
+    @SerialName("iduser") val iduser: Int = 0,
+    @SerialName("username") val username: String,
+    @SerialName("password") val password: String
 )

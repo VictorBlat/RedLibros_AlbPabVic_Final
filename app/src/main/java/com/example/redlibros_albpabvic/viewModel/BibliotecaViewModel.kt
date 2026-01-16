@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 enum class BibliotecaFiltro {
-    TODOS, AUTOR, FAVORITOS
+    TODOS, AUTOR
 }
 
 data class BibliotecaUiState(
@@ -34,7 +34,6 @@ class BibliotecaViewModel(
             when (filtro) {
                 BibliotecaFiltro.TODOS -> libroRepository.getAllLibros()
                 BibliotecaFiltro.AUTOR -> libroRepository.getLibrosByAutor(autorFiltroState.value)
-                BibliotecaFiltro.FAVORITOS -> libroRepository.getLibrosFavoritos()
             }
         }.map { lista ->
             BibliotecaUiState(
@@ -54,24 +53,32 @@ class BibliotecaViewModel(
 
     fun setAutorFiltro(autor: String) {
         autorFiltroState.value = autor
-        filtroState.value = BibliotecaFiltro.AUTOR
     }
 
-    fun toggleFavorito(libro: Libro) {
+    fun addLibro(nombre: String, autor: String, isbn: String, editorial: String = "") {
         viewModelScope.launch {
-            libroRepository.updateLibro(libro.copy(favorito = !libro.favorito))
+            try {
+                libroRepository.insertLibro(
+                    Libro(
+                        nombre = nombre,
+                        autor = autor,
+                        isbn = isbn,
+                        editorial = editorial
+                    )
+                )
+            } catch (e: Exception) {
+                // Manejar error
+            }
         }
     }
 
-    fun addLibro(nombre: String, autor: String, isbn: String) {
+    fun deleteLibro(libro: Libro) {
         viewModelScope.launch {
-            libroRepository.insertLibro(
-                Libro(
-                    nombre = nombre,
-                    autor = autor,
-                    isbn = isbn
-                )
-            )
+            try {
+                libroRepository.deleteLibro(libro)
+            } catch (e: Exception) {
+                // Manejar error
+            }
         }
     }
 }

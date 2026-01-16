@@ -5,8 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -72,7 +71,7 @@ fun BibliotecaScreen(
                     items(uiState.libros) { libro ->
                         LibroItem(
                             libro = libro,
-                            onToggleFavorito = { viewModel.toggleFavorito(libro) }
+                            onDelete = { viewModel.deleteLibro(libro) }
                         )
                     }
                 }
@@ -81,8 +80,8 @@ fun BibliotecaScreen(
             if (showDialog) {
                 AddLibroDialog(
                     onDismiss = { showDialog = false },
-                    onAdd = { titulo, autor, isbn ->
-                        viewModel.addLibro(titulo, autor, isbn)
+                    onAdd = { titulo, autor, isbn, editorial ->
+                        viewModel.addLibro(titulo, autor, isbn, editorial)
                         showDialog = false
                     }
                 )
@@ -94,7 +93,7 @@ fun BibliotecaScreen(
 @Composable
 fun LibroItem(
     libro: Libro,
-    onToggleFavorito: () -> Unit
+    onDelete: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -106,22 +105,22 @@ fun LibroItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(libro.nombre, style = MaterialTheme.typography.titleMedium)
-                Text("Autor: ${libro.autor}")
-                Text("ISBN: ${libro.isbn}")
-            }
-            IconButton(onClick = onToggleFavorito) {
-                if (libro.favorito) {
-                    Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = "Quitar de favoritos",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Añadir a favoritos"
-                    )
+                if (libro.autor != null) {
+                    Text("Autor: ${libro.autor}")
                 }
+                if (libro.isbn != null) {
+                    Text("ISBN: ${libro.isbn}")
+                }
+                if (libro.editorial != null) {
+                    Text("Editorial: ${libro.editorial}")
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Eliminar libro",
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
         }
     }
@@ -143,13 +142,7 @@ fun BibliotecaBottomBar(
             selected = filtro == BibliotecaFiltro.AUTOR,
             onClick = { onFiltroChange(BibliotecaFiltro.AUTOR) },
             icon = {},
-            label = { Text("Autor") }
-        )
-        NavigationBarItem(
-            selected = filtro == BibliotecaFiltro.FAVORITOS,
-            onClick = { onFiltroChange(BibliotecaFiltro.FAVORITOS) },
-            icon = {},
-            label = { Text("Favoritos") }
+            label = { Text("Por Autor") }
         )
     }
 }
@@ -164,7 +157,8 @@ fun AutorSearchBar(
         value = autor,
         onValueChange = onAutorChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text("Buscar por autor") }
+        label = { Text("Buscar por autor") },
+        placeholder = { Text("Escribe el nombre del autor...") }
     )
 }
 
@@ -172,11 +166,12 @@ fun AutorSearchBar(
 @Composable
 fun AddLibroDialog(
     onDismiss: () -> Unit,
-    onAdd: (String, String, String) -> Unit
+    onAdd: (String, String, String, String) -> Unit
 ) {
     var titulo by remember { mutableStateOf("") }
     var autor by remember { mutableStateOf("") }
     var isbn by remember { mutableStateOf("") }
+    var editorial by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -184,9 +179,10 @@ fun AddLibroDialog(
             TextButton(
                 onClick = {
                     if (titulo.isNotBlank()) {
-                        onAdd(titulo, autor, isbn)
+                        onAdd(titulo, autor, isbn, editorial)
                     }
-                }
+                },
+                enabled = titulo.isNotBlank()
             ) {
                 Text("Añadir")
             }
@@ -198,24 +194,36 @@ fun AddLibroDialog(
         },
         title = { Text("Nuevo libro") },
         text = {
-            Column {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(
                     value = titulo,
                     onValueChange = { titulo = it },
-                    label = { Text("Título") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Título *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = autor,
                     onValueChange = { autor = it },
                     label = { Text("Autor") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = isbn,
                     onValueChange = { isbn = it },
                     label = { Text("ISBN") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = editorial,
+                    onValueChange = { editorial = it },
+                    label = { Text("Editorial") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
             }
         }

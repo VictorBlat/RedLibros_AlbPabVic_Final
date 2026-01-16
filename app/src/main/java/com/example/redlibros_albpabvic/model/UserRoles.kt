@@ -4,7 +4,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Curso(
-    @SerialName("idcurso") val idcurso: Int = 0,
-    @SerialName("nombre") val nombre: String
+data class UserRoles(
+    @SerialName("id") val id: Int = 0,
+    @SerialName("iduser") val iduser: Int,
+    @SerialName("idrol") val idrol: Int
 )

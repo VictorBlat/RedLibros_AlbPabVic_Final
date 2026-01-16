@@ -1,13 +1,13 @@
 package com.example.redlibros_albpabvic.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-@Entity(tableName = "libros")
+@Serializable
 data class Libro(
-    @PrimaryKey(autoGenerate = true) val idlibro: Int = 0,
-    val nombre: String,
-    val autor: String,
-    val isbn: String,
-    val favorito: Boolean = false
+    @SerialName("idlibro") val idlibro: Int = 0,
+    @SerialName("nombre") val nombre: String,
+    @SerialName("autor") val autor: String? = null,
+    @SerialName("isbn") val isbn: String? = null,
+    @SerialName("editorial") val editorial: String? = null
 )
