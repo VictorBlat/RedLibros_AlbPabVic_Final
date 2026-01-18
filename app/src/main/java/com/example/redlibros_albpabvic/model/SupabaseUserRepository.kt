@@ -102,7 +102,7 @@ class SupabaseUserRepository : UserRepository {
         }
     }
 
-    // NUEVO - Obtener cursos del alumno
+    // Obtener cursos del alumno
     override suspend fun getCursosDelAlumno(idalumno: Int): List<Int> {
         return try {
             val alumnoCursos = client.from("alumno_curso")
@@ -117,7 +117,7 @@ class SupabaseUserRepository : UserRepository {
         }
     }
 
-    // NUEVO - Obtener libros por cursos
+    // Obtener libros por cursos
     override suspend fun getLibrosPorCursos(idsCursos: List<Int>): List<Libro> {
         return try {
             if (idsCursos.isEmpty()) return emptyList()

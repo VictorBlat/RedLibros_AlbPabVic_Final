@@ -3,7 +3,7 @@ package com.example.redlibros_albpabvic.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Colores primarios - Tema de biblioteca
-val Primary = Color(0xFF2E7D32) // Verde bosque (representa libros/naturaleza)
+val Primary = Color(0xFF2E7D32) // Verde bosque
 val PrimaryVariant = Color(0xFF1B5E20)
 val Secondary = Color(0xFF00897B) // Verde azulado
 val SecondaryVariant = Color(0xFF00695C)

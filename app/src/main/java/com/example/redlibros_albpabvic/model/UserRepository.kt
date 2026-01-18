@@ -6,8 +6,8 @@ interface UserRepository {
     suspend fun getAlumnoById(idalumno: Int): Alumno?
     suspend fun getTransaccionesByAlumno(idalumno: Int): List<TransaccionConLibro>
     suspend fun marcarDevolucion(idtransaccion: Int)
-    suspend fun getCursosDelAlumno(idalumno: Int): List<Int> // NUEVO
-    suspend fun getLibrosPorCursos(idsCursos: List<Int>): List<Libro> // NUEVO
+    suspend fun getCursosDelAlumno(idalumno: Int): List<Int>
+    suspend fun getLibrosPorCursos(idsCursos: List<Int>): List<Libro>
 }
 
 data class TransaccionConLibro(
