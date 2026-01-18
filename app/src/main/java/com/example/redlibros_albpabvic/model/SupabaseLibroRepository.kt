@@ -9,37 +9,18 @@ import kotlinx.coroutines.flow.flow
 class SupabaseLibroRepository : LibroRepository {
     private val client = SupabaseClient.client
 
-    override fun getAllLibros(): Flow<List<Libro>> = flow {
+    override fun getLibrosPorIds(idsLibros: List<Int>): Flow<List<Libro>> = flow {
         while (true) {
             try {
-                val result = client.from("libros")
-                    .select()
-                    .decodeList<Libro>()
-                emit(result.sortedBy { it.nombre })
-            } catch (e: Exception) {
-                emit(emptyList())
-            }
-            delay(2000)
-        }
-    }
-
-    override fun getLibrosByAutor(autor: String): Flow<List<Libro>> = flow {
-        while (true) {
-            try {
-                val result = if (autor.isBlank()) {
-                    client.from("libros")
+                if (idsLibros.isEmpty()) {
+                    emit(emptyList())
+                } else {
+                    val result = client.from("libros")
                         .select()
                         .decodeList<Libro>()
-                } else {
-                    client.from("libros")
-                        .select {
-                            filter {
-                                ilike("autor", "%$autor%")
-                            }
-                        }
-                        .decodeList<Libro>()
+                        .filter { it.idlibro in idsLibros }
+                    emit(result.sortedBy { it.nombre })
                 }
-                emit(result.sortedBy { it.nombre })
             } catch (e: Exception) {
                 emit(emptyList())
             }
@@ -47,47 +28,25 @@ class SupabaseLibroRepository : LibroRepository {
         }
     }
 
-    override suspend fun insertLibro(libro: Libro) {
-        try {
-            val libroData = mapOf(
-                "nombre" to libro.nombre,
-                "autor" to libro.autor,
-                "isbn" to libro.isbn,
-                "editorial" to libro.editorial
-            )
-            client.from("libros").insert(libroData)
-        } catch (e: Exception) {
-            throw e
-        }
-    }
-
-    override suspend fun updateLibro(libro: Libro) {
-        try {
-            val libroData = mapOf(
-                "nombre" to libro.nombre,
-                "autor" to libro.autor,
-                "isbn" to libro.isbn,
-                "editorial" to libro.editorial
-            )
-            client.from("libros").update(libroData) {
-                filter {
-                    eq("idlibro", libro.idlibro)
+    override fun getLibrosByAutor(autor: String, idsLibros: List<Int>): Flow<List<Libro>> = flow {
+        while (true) {
+            try {
+                if (idsLibros.isEmpty()) {
+                    emit(emptyList())
+                } else {
+                    val result = client.from("libros")
+                        .select()
+                        .decodeList<Libro>()
+                        .filter {
+                            it.idlibro in idsLibros &&
+                                    (autor.isBlank() || it.autor?.contains(autor, ignoreCase = true) == true)
+                        }
+                    emit(result.sortedBy { it.nombre })
                 }
+            } catch (e: Exception) {
+                emit(emptyList())
             }
-        } catch (e: Exception) {
-            throw e
-        }
-    }
-
-    override suspend fun deleteLibro(libro: Libro) {
-        try {
-            client.from("libros").delete {
-                filter {
-                    eq("idlibro", libro.idlibro)
-                }
-            }
-        } catch (e: Exception) {
-            throw e
+            delay(2000)
         }
     }
 }

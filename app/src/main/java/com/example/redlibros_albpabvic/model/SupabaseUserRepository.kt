@@ -1,71 +1,161 @@
 package com.example.redlibros_albpabvic.model
 
-import android.util.Log
 import com.example.redlibros_albpabvic.data.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SupabaseUserRepository : UserRepository {
     private val client = SupabaseClient.client
-    private val TAG = "SupabaseUserRepo"
-
-    override suspend fun insertUser(user: User) {
-        try {
-            Log.d(TAG, "=== INICIO REGISTRO ===")
-            Log.d(TAG, "URL: ${client.supabaseUrl}")
-            Log.d(TAG, "Usuario: ${user.username}")
-            Log.d(TAG, "Password length: ${user.password.length}")
-
-            // Intentar con buildJsonObject
-            val userData = buildJsonObject {
-                put("username", user.username)
-                put("password", user.password)
-            }
-
-            Log.d(TAG, "Datos a enviar: $userData")
-
-            val response = client.from("users").insert(userData)
-
-            Log.d(TAG, "Usuario registrado exitosamente")
-            Log.d(TAG, "=== FIN REGISTRO ===")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error detallado al registrar usuario:")
-            Log.e(TAG, "Tipo de error: ${e::class.simpleName}")
-            Log.e(TAG, "Mensaje: ${e.message}")
-            Log.e(TAG, "Stack trace: ${e.stackTraceToString()}")
-            throw Exception("No se pudo registrar el usuario. Verifica tu conexión a internet y que Supabase esté configurado correctamente.")
-        }
-    }
 
     override suspend fun getUserByUsername(username: String): User? {
         return try {
-            Log.d(TAG, "=== INICIO LOGIN ===")
-            Log.d(TAG, "Buscando usuario: $username")
-
-            val result = client.from("users")
+            client.from("users")
                 .select(Columns.ALL) {
-                    filter {
-                        eq("username", username)
-                    }
+                    filter { eq("username", username) }
                     limit(1)
                 }
                 .decodeSingleOrNull<User>()
-
-            if (result != null) {
-                Log.d(TAG, "Usuario encontrado: ${result.username} (ID: ${result.iduser})")
-            } else {
-                Log.d(TAG, "Usuario no encontrado: $username")
-            }
-
-            Log.d(TAG, "=== FIN LOGIN ===")
-            result
         } catch (e: Exception) {
-            Log.e(TAG, "Error al buscar usuario:")
-            Log.e(TAG, "Mensaje: ${e.message}")
-            Log.e(TAG, "Stack trace: ${e.stackTraceToString()}")
             null
         }
     }
+
+    override suspend fun getAlumnoByUserId(iduser: Int): Alumno? {
+        return try {
+            client.from("alumnos")
+                .select(Columns.ALL) {
+                    filter { eq("iduser", iduser) }
+                    limit(1)
+                }
+                .decodeSingleOrNull<Alumno>()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun getAlumnoById(idalumno: Int): Alumno? {
+        return try {
+            client.from("alumnos")
+                .select(Columns.ALL) {
+                    filter { eq("idalumno", idalumno) }
+                    limit(1)
+                }
+                .decodeSingleOrNull<Alumno>()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun getTransaccionesByAlumno(idalumno: Int): List<TransaccionConLibro> {
+        return try {
+            val transacciones = client.from("transacciones")
+                .select(Columns.ALL) {
+                    filter { eq("idalumno", idalumno) }
+                }
+                .decodeList<Transaccion>()
+
+            transacciones.mapNotNull { transaccion ->
+                try {
+                    val libro = client.from("libros")
+                        .select(Columns.ALL) {
+                            filter { eq("idlibro", transaccion.idlibro) }
+                            limit(1)
+                        }
+                        .decodeSingle<Libro>()
+
+                    TransaccionConLibro(
+                        idtransaccion = transaccion.idtransaccion,
+                        libro = libro,
+                        fechaPrestamo = transaccion.fechaPrestamo,
+                        fechaDevolucion = transaccion.fechaDevolucion
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    override suspend fun marcarDevolucion(idtransaccion: Int) {
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val currentDate = dateFormat.format(Date())
+
+            val updateData = buildJsonObject {
+                put("fecha_devolucion", currentDate)
+            }
+
+            client.from("transacciones").update(updateData) {
+                filter { eq("idtransaccion", idtransaccion) }
+            }
+        } catch (e: Exception) {
+            throw e
+        }
+    }
+
+    // NUEVO - Obtener cursos del alumno
+    override suspend fun getCursosDelAlumno(idalumno: Int): List<Int> {
+        return try {
+            val alumnoCursos = client.from("alumno_curso")
+                .select(Columns.ALL) {
+                    filter { eq("idalumno", idalumno) }
+                }
+                .decodeList<AlumnoCursoDb>()
+
+            alumnoCursos.map { it.idcurso }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    // NUEVO - Obtener libros por cursos
+    override suspend fun getLibrosPorCursos(idsCursos: List<Int>): List<Libro> {
+        return try {
+            if (idsCursos.isEmpty()) return emptyList()
+
+            // Obtener todos los curso_libro de los cursos del alumno
+            val cursoLibros = client.from("curso_libro")
+                .select(Columns.ALL)
+                .decodeList<CursoLibroDb>()
+                .filter { it.idcurso in idsCursos }
+
+            val idsLibros = cursoLibros.map { it.idlibro }.distinct()
+
+            if (idsLibros.isEmpty()) return emptyList()
+
+            // Obtener los libros
+            val libros = client.from("libros")
+                .select(Columns.ALL)
+                .decodeList<Libro>()
+                .filter { it.idlibro in idsLibros }
+
+            libros
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }
+
+// Clases auxiliares para deserialización
+@Serializable
+data class AlumnoCursoDb(
+    @SerialName("id") val id: Int,
+    @SerialName("idalumno") val idalumno: Int,
+    @SerialName("idcurso") val idcurso: Int
+)
+
+@Serializable
+data class CursoLibroDb(
+    @SerialName("id") val id: Int,
+    @SerialName("idcurso") val idcurso: Int,
+    @SerialName("idlibro") val idlibro: Int
+)

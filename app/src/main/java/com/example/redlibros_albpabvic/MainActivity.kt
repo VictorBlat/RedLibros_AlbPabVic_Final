@@ -6,6 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.example.redlibros_albpabvic.Rutas.AppNavGraph
@@ -22,19 +26,26 @@ class MainActivity : ComponentActivity() {
         val userRepository = SupabaseUserRepository()
         val libroRepository = SupabaseLibroRepository()
 
-        val loginViewModel = LoginViewModel(userRepository)
-        val bibliotecaViewModel = BibliotecaViewModel(libroRepository)
-
         setContent {
             RedLibros_AlbPabVicTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    val loginViewModel = remember { LoginViewModel(userRepository) }
+
+                    var bibliotecaViewModel by remember {
+                        mutableStateOf<BibliotecaViewModel?>(null)
+                    }
+
                     val navController = rememberNavController()
+
                     AppNavGraph(
                         navController = navController,
                         loginViewModel = loginViewModel,
+                        onLoginSuccess = {
+                            bibliotecaViewModel = BibliotecaViewModel(libroRepository, userRepository)
+                        },
                         bibliotecaViewModel = bibliotecaViewModel
                     )
                 }

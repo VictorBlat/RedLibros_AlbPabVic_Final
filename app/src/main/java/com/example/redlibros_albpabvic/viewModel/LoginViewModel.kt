@@ -1,10 +1,9 @@
 package com.example.redlibros_albpabvic.viewModel
 
-import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.redlibros_albpabvic.model.User
 import com.example.redlibros_albpabvic.model.UserRepository
+import com.example.redlibros_albpabvic.model.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -12,7 +11,6 @@ import kotlinx.coroutines.launch
 data class LoginUiState(
     val username: String = "",
     val password: String = "",
-    val remember: Boolean = false,
     val isLoginEnabled: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
@@ -26,98 +24,31 @@ class LoginViewModel(
     val uiState: StateFlow<LoginUiState> = _uiState
 
     fun onUsernameChange(newUsername: String) {
-        _uiState.value = _uiState.value.copy(
-            username = newUsername,
-            errorMessage = null
-        )
+        _uiState.value = _uiState.value.copy(username = newUsername, errorMessage = null)
         validate()
     }
 
     fun onPasswordChange(newPassword: String) {
-        _uiState.value = _uiState.value.copy(
-            password = newPassword,
-            errorMessage = null
-        )
+        _uiState.value = _uiState.value.copy(password = newPassword, errorMessage = null)
         validate()
     }
 
-    fun toggleRemember() {
-        _uiState.value = _uiState.value.copy(
-            remember = !_uiState.value.remember
-        )
-    }
-
     private fun validate() {
-        val username = _uiState.value.username
-        val password = _uiState.value.password
-
-        val isValid = username.isNotBlank() &&
-                Patterns.EMAIL_ADDRESS.matcher(username).matches() &&
-                password.length >= 8
-
-        _uiState.value = _uiState.value.copy(
-            isLoginEnabled = isValid
-        )
-    }
-
-    fun registerUser(onResult: (Boolean) -> Unit) {
-        val state = _uiState.value
-
-        // Validación básica
-        if (state.username.isBlank() || state.password.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Email y contraseña son obligatorios"
-            )
-            onResult(false)
-            return
-        }
-
-        if (!Patterns.EMAIL_ADDRESS.matcher(state.username).matches()) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Email no válido"
-            )
-            onResult(false)
-            return
-        }
-
-        if (state.password.length < 8) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "La contraseña debe tener al menos 8 caracteres"
-            )
-            onResult(false)
-            return
-        }
-
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-
-        viewModelScope.launch {
-            try {
-                userRepository.insertUser(
-                    User(
-                        username = state.username,
-                        password = state.password
-                    )
-                )
-                _uiState.value = _uiState.value.copy(isLoading = false)
-                onResult(true)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Error al registrar: ${e.message}"
-                )
-                onResult(false)
-            }
-        }
+        val isValid = _uiState.value.username.isNotBlank() && _uiState.value.password.isNotBlank()
+        _uiState.value = _uiState.value.copy(isLoginEnabled = isValid)
     }
 
     fun login(onResult: (Boolean) -> Unit) {
         val state = _uiState.value
 
-        // Validación básica
-        if (state.username.isBlank() || state.password.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Email y contraseña son obligatorios"
-            )
+        if (state.username.isBlank()) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Por favor, introduce tu email")
+            onResult(false)
+            return
+        }
+
+        if (state.password.isBlank()) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Por favor, introduce tu contraseña")
             onResult(false)
             return
         }
@@ -131,28 +62,50 @@ class LoginViewModel(
                 if (user == null) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = "Usuario no encontrado"
+                        errorMessage = "Usuario no encontrado. Verifica tu email."
                     )
                     onResult(false)
                     return@launch
                 }
 
-                val isPasswordCorrect = user.password == state.password
-
-                if (isPasswordCorrect) {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                    onResult(true)
-                } else {
+                if (user.password != state.password) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = "Contraseña incorrecta"
+                        errorMessage = "Contraseña incorrecta. Inténtalo de nuevo."
                     )
                     onResult(false)
+                    return@launch
                 }
+
+                // Usuario y contraseña correctos
+                UserSession.iduser = user.iduser
+                UserSession.username = user.username
+
+                // Verificar si es alumno
+                val alumno = userRepository.getAlumnoByUserId(user.iduser)
+
+                if (alumno == null) {
+                    // Es profesor - BLOQUEAR
+                    UserSession.clear()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = "Esta aplicación es solo para alumnos.\nPor favor, usa la aplicación de escritorio."
+                    )
+                    onResult(false)
+                    return@launch
+                }
+
+                // Es alumno - PERMITIR
+                UserSession.idalumno = alumno.idalumno
+                UserSession.isProfesor = false
+
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                onResult(true)
+
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = "Error de conexión: ${e.message}"
+                    errorMessage = "Error de conexión: ${e.message}\nVerifica tu conexión a internet."
                 )
                 onResult(false)
             }

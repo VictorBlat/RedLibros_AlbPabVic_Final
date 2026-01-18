@@ -1,6 +1,6 @@
 package com.example.redlibros_albpabvic.data
 
-import android.net.http.HttpResponseCache.install
+
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient

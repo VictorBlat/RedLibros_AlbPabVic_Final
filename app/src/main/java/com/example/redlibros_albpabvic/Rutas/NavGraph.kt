@@ -13,16 +13,15 @@ import com.example.redlibros_albpabvic.viewModel.LoginViewModel
 fun AppNavGraph(
     navController: NavHostController,
     loginViewModel: LoginViewModel,
-    bibliotecaViewModel: BibliotecaViewModel
+    onLoginSuccess: () -> Unit,
+    bibliotecaViewModel: BibliotecaViewModel?
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = NavRoutes.Login.route
-    ) {
+    NavHost(navController = navController, startDestination = NavRoutes.Login.route) {
         composable(NavRoutes.Login.route) {
             LoginScreen(
                 loginViewModel = loginViewModel,
                 onLoginSuccess = {
+                    onLoginSuccess() // Crear el BibliotecaViewModel
                     navController.navigate(NavRoutes.Biblioteca.route) {
                         popUpTo(NavRoutes.Login.route) { inclusive = true }
                     }
@@ -30,9 +29,17 @@ fun AppNavGraph(
             )
         }
         composable(NavRoutes.Biblioteca.route) {
-            BibliotecaScreen(
-                viewModel = bibliotecaViewModel
-            )
+            // Solo mostrar BibliotecaScreen si el ViewModel existe
+            bibliotecaViewModel?.let { viewModel ->
+                BibliotecaScreen(
+                    viewModel = viewModel,
+                    onLogout = {
+                        navController.navigate(NavRoutes.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
         }
     }
 }
